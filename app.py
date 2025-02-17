@@ -78,7 +78,7 @@ class DocHandler:
 class CSVHandler:
     def __init__(self, file_path: str):
         self.file_path = Path(file_path)
-        self.df = pd.read_csv(file_path) if self.file_path.exists() else pd.DataFrame(columns=['Paper', 'Label', 'Reason'])
+        self.df = pd.read_csv(file_path) if self.file_path.exists() else pd.DataFrame(columns=['Paper','PdfLink', 'Year', 'Label', 'Reason'])
 
     def update_value(self, paper_name: str, label: str, reason: str) -> bool:
         try:
@@ -113,18 +113,16 @@ class CSVHandler:
 
 class UI:
     def __init__(self):
-        st.set_page_config(page_title="Research Paper Classifier", page_icon="📚")
+        st.set_page_config(page_title="Research Docs Annotator", page_icon="📚")
         if 'processing' not in st.session_state:
             st.session_state.processing = False
     @staticmethod
     def render_header():
-        st.title("📚 Research Paper Classifier")
+        st.title("📚 Research Docs Annotator")
         st.markdown("---")
     @staticmethod
     def get_multiple_inputs():
         total_cat = int(st.number_input('Number of Categories, 0 means default :', min_value=0, max_value=100, value=0, placeholder="Enter number of categories..."))
-        """Function to get multiple string inputs from the user."""
-
         inputs = []
         if total_cat < 1:
             return None
