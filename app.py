@@ -40,7 +40,7 @@ class AppConfig:
 class GeminiAPI:
     def __init__(self, api_key: str):
         self.client = genai.Client(api_key=api_key)
-        self.model_id = "gemini-2.0-flash-lite-preview-02-05"
+        self.model_id = "gemini-1.5-flash"
 
     def upload_pdf(self, pdf_path: str):
         if not os.path.exists(pdf_path):
