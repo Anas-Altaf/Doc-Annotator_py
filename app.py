@@ -26,11 +26,11 @@ class AppConfig:
     Categories: {{
         {categories}
     }}
-    
-    Output: Return only two things, separated by a comma:
-    1. The exact category name from the list above
+    Constraints : (
+    Output: Return only two things, separated by a comma
+    1. The exact category name from the list above, No other category, Just Text, No symbols etc,
     2. A brief reason for the classification
-    
+    )
     Example response format:
     Deep Learning, Uses neural networks for pattern recognition
     
@@ -40,7 +40,7 @@ class AppConfig:
 class GeminiAPI:
     def __init__(self, api_key: str):
         self.client = genai.Client(api_key=api_key)
-        self.model_id = "gemini-2.0-flash"
+        self.model_id = "gemini-2.0-flash-lite-preview-02-05"
 
     def upload_pdf(self, pdf_path: str):
         if not os.path.exists(pdf_path):
@@ -56,6 +56,7 @@ class GeminiAPI:
 
     def process_pdf(self, pdf_path: str, prompt: str):
         uploaded_file = self.upload_pdf(pdf_path)
+        # st.info(self.client.models.list(config={'page_size': 5, 'query_base' : True}).page)
         response = self.client.models.generate_content(
             model=self.model_id,
             contents=[prompt, uploaded_file]
@@ -78,7 +79,7 @@ class DocHandler:
 class CSVHandler:
     def __init__(self, file_path: str):
         self.file_path = Path(file_path)
-        self.df = pd.read_csv(file_path) if self.file_path.exists() else pd.DataFrame(columns=['Paper','PdfLink', 'Year', 'Label', 'Reason'])
+        self.df = pd.read_csv(file_path) if self.file_path.exists() else pd.DataFrame(columns=['Paper','Author', 'Year', 'PdfLink', 'Label', 'Reason'])
 
     def update_value(self, paper_name: str, label: str, reason: str) -> bool:
         try:
@@ -93,6 +94,9 @@ class CSVHandler:
                 # If paper not found, add new row
                 new_row = pd.DataFrame({
                     'Paper': [paper_name],
+                    'Author' : '',
+                    'Year': '',
+                    'PdfLink':'' ,
                     'Label': [str(label)],
                     'Reason': [str(reason)]
                 })
@@ -198,8 +202,6 @@ def main():
 
             # Process PDFs
             for idx, pdf in enumerate(pdfs, 1):
-
-
                 try:
                     result = gemini_api.process_pdf(str(pdf), prompt)
 
@@ -217,13 +219,16 @@ def main():
 
                     if csv_handler.update_value(pdf.name, label, reason):
                         msg += f'{idx} : ✓ Classified "{pdf.name}" as "{label}"\n'
+                    else:
+                        msg += f'{idx} : ⚠ CSV issue "{pdf.name}" as "{label}"\n'
 
                 except Exception as e:
                     st.error(f"{idx} : ❌Error processing {pdf.name}: {str(e)}")
                     st.snow()
-                    break;
-                ui.render_progress(idx, total_pdfs,progress_bar, progress_text, current_info, msg )
-                time.sleep(0.1)  # Prevent UI freezing
+                    break
+                finally:
+                    ui.render_progress(idx, total_pdfs,progress_bar, progress_text, current_info, msg )
+                    time.sleep(0.1)  # Prevent UI freezing
 
             st.toast("Classification completed!", icon="✅")
             st.success("✅ Classification completed!")
