@@ -37,7 +37,7 @@ Categories: {{
 }}
 Constraints:
 Output: Return a JSON object with exactly two keys: "category" and "reason".
-- "category": The exact category name from the list above. If the paper doesn't match, choose the closest category.
+- "category": The exact category name from the list above. If the paper doesn't match, choose the closest category from the list.
 - "reason": A brief reason for the classification.
 Example response format:
 {{
@@ -272,6 +272,7 @@ def main():
 
                     if label not in AppConfig.CATEGORIES:
                         msg += f"{idx} : ❌ Invalid category '{label}' for {pdf.name}\n"
+                        pdfs.append(pdf)
                         continue
 
                     if csv_handler.update_value(pdf.name, label, reason):
