@@ -132,6 +132,9 @@ class JSONHandler:
         self.data = [entry for entry in self.data if entry.get("Paper") != paper_name]
         self.data.append({
             "Paper": paper_name,
+            'Author': '',
+            'Year': '',
+            'PdfLink': '',
             "Label": label,
             "Reason": reason
         })
@@ -188,7 +191,7 @@ class UI:
     @staticmethod
     def render_progress(current, total, progress_bar, progress_text, current_info, info):
         with st.spinner("Please wait, Processing..."):
-            progress = int(floor((current / total) * 100))
+            progress = int(floor((current / total) * 100)) % 100
             progress_bar.progress(progress, text=f"{current} / {total} | {round((current / total) * 100, 2)}%")
             progress_text.text(f"Processing: {current}/{total} papers")
             current_info.code(info)
@@ -250,7 +253,7 @@ def main():
                 try:
                     result = gemini_api.process_pdf(str(pdf), prompt)
                     result = result.strip()
-                    # Remove markdown formatting if present
+                    # Remove Markdown formatting if present
                     if result.startswith("```") and result.endswith("```"):
                         lines = result.splitlines()
                         if lines[0].startswith("```"):
@@ -286,8 +289,10 @@ def main():
                     sleep(delay)
                     continue
                 finally:
-                    ui.render_progress(idx, total_pdfs, progress_bar, progress_text, current_info, msg)
+                    ui.render_progress(idx, len(pdfs), progress_bar, progress_text, current_info, msg)
                     time.sleep(0.1)
+                    if len(pdfs) > floor(total_pdfs + total_pdfs * 0.25):
+                        break;
 
             csv_handler.save_csv()
             json_handler.save_json()
