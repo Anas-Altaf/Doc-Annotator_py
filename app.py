@@ -41,7 +41,7 @@ class AppConfig:
 class GeminiAPI:
     def __init__(self, api_key: str):
         self.client = genai.Client(api_key=api_key)
-        self.model_id = "gemini-1.5-flash"
+        self.model_id = "gemini-2.0-flash-001"
 
     def upload_pdf(self, pdf_path: str):
         if not os.path.exists(pdf_path):
@@ -229,6 +229,7 @@ def main():
                 except Exception as e:
                     st.error(f'{idx} : ❌Error processing "{pdf.name}" : "{str(e)}", Trying next after few seconds')
                     error_info+=f'{idx} : Failed :  "{pdf.absolute()}"  > "{str(e)}"\n'
+
                     error_area.code(error_info)
                     sleep(10)
                     continue
