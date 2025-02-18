@@ -1,0 +1,12 @@
+[
+    {
+        "Paper": "(Probably) Concave Graph Matching.pdf",
+        "Label": "Optimization",
+        "Reason": "Addresses the graph matching problem, a generic optimization problem."
+    },
+    {
+        "Paper": "3D-Aware Scene Manipulation via Inverse Graphics.pdf",
+        "Label": "Computer Vision",
+        "Reason": "Focuses on 3D scene representation, manipulation, and inverse graphics, using methods like neural networks and differentiable rendering within computer vision tasks."
+    }
+]
