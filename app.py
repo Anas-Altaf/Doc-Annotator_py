@@ -168,7 +168,7 @@ class UI:
 def main():
     ui = UI()
     ui.render_header()
-
+    delay = 60.0
     pdf_dir, csv_path, api_key = ui.render_configuration()
     categories_list = ui.get_multiple_inputs()
     if categories_list:
@@ -229,9 +229,9 @@ def main():
                 except Exception as e:
                     st.error(f'{idx} : ❌Error processing "{pdf.name}" : "{str(e)}", Trying next after few seconds')
                     error_info+=f'{idx} : Failed :  "{pdf.absolute()}"  > "{str(e)}"\n'
-
+                    pdfs.append(pdf)
                     error_area.code(error_info)
-                    sleep(10)
+                    sleep(delay)
                     continue
                 finally:
 
