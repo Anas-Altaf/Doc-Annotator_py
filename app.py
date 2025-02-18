@@ -227,7 +227,7 @@ def main():
             doc_handler = DocHandler(pdf_dir)
             csv_handler = CSVHandler(csv_path)
             json_handler = JSONHandler(json_path)
-            gemini_api = GeminiAPI(api_key, model_id=random.AppConfig.MODELS)
+            gemini_api = GeminiAPI(api_key, model_id=random.choice(AppConfig.MODELS))
 
             pdfs = doc_handler.list_pdfs()
             total_pdfs = len(pdfs)
