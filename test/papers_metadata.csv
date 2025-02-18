@@ -1,3 +1,3 @@
 Paper,Author,Year,PdfLink,Label,Reason
-(Probably) Concave Graph Matching.pdf,,,,Optimization,"Addresses the graph matching problem, a generic optimization problem."
-3D-Aware Scene Manipulation via Inverse Graphics.pdf,,,,Computer Vision,"Focuses on 3D scene representation, manipulation, and inverse graphics, using methods like neural networks and differentiable rendering within computer vision tasks."
+(Probably) Concave Graph Matching.pdf,,,,Optimization,Deals with graph matching using conditionally concave energies on polytopes and finding local minima.
+3D-Aware Scene Manipulation via Inverse Graphics.pdf,,,,Computer Vision,"The paper focuses on 3D scene understanding and manipulation from images, which is a core area of computer vision research."

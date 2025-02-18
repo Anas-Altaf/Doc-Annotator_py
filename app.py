@@ -14,13 +14,12 @@ import json
 
 @dataclass
 class AppConfig:
-    MODELS =[
+    MODELS = [
         "gemini-2.0-flash",
         "gemini-2.0-flash-lite-preview-02-05",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
-        "gemini-1.0-pro"
+        "gemini-1.5-pro"
     ]
     CATEGORIES = [
         "Deep Learning",
@@ -49,7 +48,7 @@ Constraints: Return only the JSON object, without any additional text.
 """
 
 class GeminiAPI:
-    def __init__(self, api_key: str, model_id: str = "gemini-2.0-flash-001"):
+    def __init__(self, api_key: str, model_id: str = "gemini-2.0-flash"):
         self.client = genai.Client(api_key=api_key)
         self.model_id = model_id
 
@@ -283,6 +282,7 @@ def main():
                     error_info += f'{idx} : Failed: "{pdf.absolute()}" > "{str(e)}"\n'
                     error_area.code(error_info)
                     gemini_api = GeminiAPI(api_key, model_id=random.choice(AppConfig.MODELS))
+                    pdfs.append(pdf)
                     sleep(delay)
                     continue
                 finally:
