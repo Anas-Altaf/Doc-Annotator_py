@@ -1,4 +1,5 @@
 from math import floor
+from time import sleep
 
 import streamlit as st
 import pandas as pd
@@ -153,10 +154,11 @@ class UI:
         return pdf_dir, csv_path, api_key
     @staticmethod
     def render_progress( current, total ,progress_bar,progress_text,  current_info, info):
-        progress = int(floor((current / total) * 100))
-        progress_bar.progress(progress,text=f"{current} / {total} | {round((current / total) * 100, 2)}%")
-        progress_text.text(f"Processing: {current}/{total} papers")
-        current_info.code(info)
+        with st.spinner("Please wait, Processing..."):
+            progress = int(floor((current / total) * 100))
+            progress_bar.progress(progress,text=f"{current} / {total} | {round((current / total) * 100, 2)}%")
+            progress_text.text(f"Processing: {current}/{total} papers")
+            current_info.code(info)
     @staticmethod
     def render_results( df):
         if df is not None and not df.empty:
@@ -195,7 +197,9 @@ def main():
             progress_bar = st.empty()
             progress_text = st.empty()
             current_info= st.empty()
+            error_area =  st.empty()
             msg = ''
+            error_info =''
             # Prepare prompt
             categories_str = ','.join(f'"{cat}"' for cat in AppConfig.CATEGORIES)
             prompt = AppConfig.PROMPT_TEMPLATE.format(categories=categories_str)
@@ -223,10 +227,13 @@ def main():
                         msg += f'{idx} : ⚠ CSV issue "{pdf.name}" as "{label}"\n'
 
                 except Exception as e:
-                    st.error(f"{idx} : ❌Error processing {pdf.name}: {str(e)}")
-                    st.snow()
-                    break
+                    st.error(f'{idx} : ❌Error processing "{pdf.name}" : "{str(e)}", Trying next after few seconds')
+                    error_info+=f'{idx} : Failed :  "{pdf.absolute()}"  > "{str(e)}"\n'
+                    error_area.code(error_info)
+                    sleep(10)
+                    continue
                 finally:
+
                     ui.render_progress(idx, total_pdfs,progress_bar, progress_text, current_info, msg )
                     time.sleep(0.1)  # Prevent UI freezing
 

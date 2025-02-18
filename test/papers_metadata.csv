@@ -1,3 +1,3 @@
-Paper,PdfLink,Year,Label,Reason
-(Probably) Concave Graph Matching.pdf,,,Deep Learning,Introduces conditionally concave and probably conditionally concave energies
-3D-Aware Scene Manipulation via Inverse Graphics.pdf,,,Deep Learning,Incorporates object-based scene representation into a deep generative model using an encoder-decoder architecture.
+Paper,Author,Year,PdfLink,Label,Reason
+(Probably) Concave Graph Matching.pdf,,,,Optimization,Analyzes and generalizes the idea of concave relaxations for graph matching problems.
+3D-Aware Scene Manipulation via Inverse Graphics.pdf,,,,Computer Vision,"The paper focuses on 3D scene manipulation using inverse graphics and neural networks, which are core concepts in computer vision."
