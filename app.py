@@ -3,7 +3,6 @@ from time import sleep
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-
 import random
 from google import genai
 import os
@@ -30,21 +29,20 @@ class AppConfig:
     ]
     PROMPT_TEMPLATE = """
 Function: Classify_Document
-Input: Research Paper (PDF/Text)
+Input: Research Paper Abstract (Text)
 
 Categories: {{
     {categories}
 }}
 Constraints:
 Output: Return a JSON object with exactly two keys: "category" and "reason".
-- "category": The exact category name from the list above. If the paper doesn't match, choose the closest category from the list.
+- "category": The exact category name from the list above. even If the paper abstract doesn't match.
 - "reason": A brief reason for the classification.
 Example response format:
 {{
     "category": "Deep Learning",
     "reason": "Uses neural networks for pattern recognition"
 }}
-Constraints: Return only the JSON object, without any additional text.
 """
 
 class GeminiAPI:
@@ -52,40 +50,20 @@ class GeminiAPI:
         self.client = genai.Client(api_key=api_key)
         self.model_id = model_id
 
-    def upload_pdf(self, pdf_path: str):
-        if not os.path.exists(pdf_path):
-            raise FileNotFoundError(f"PDF file not found at {pdf_path}")
-        uploaded_file = self.client.files.upload(
-            file=pdf_path,
-            config={'display_name': os.path.basename(pdf_path)}
-        )
-        return uploaded_file
-
-    def process_pdf(self, pdf_path: str, prompt: str):
-        uploaded_file = self.upload_pdf(pdf_path)
+    def process_abstract(self, abstract: str, prompt: str):
         response = self.client.models.generate_content(
             model=self.model_id,
-            contents=[prompt, uploaded_file]
+            contents=[prompt, abstract]
         )
         return response.text if response else "No response received"
 
-class DocHandler:
-    def __init__(self, directory: str):
-        self.directory = Path(directory)
-        if not self.directory.exists():
-            raise FileNotFoundError(f"Directory not found: {directory}")
-        self.pdf_files = self._get_pdf_files()
-
-    def _get_pdf_files(self) -> List[Path]:
-        return list(self.directory.glob('*.pdf'))
-
-    def list_pdfs(self) -> List[Path]:
-        return self.pdf_files
-
 class CSVHandler:
-    def __init__(self, file_path: str):
-        self.file_path = Path(file_path)
-        self.df = pd.read_csv(file_path) if self.file_path.exists() else pd.DataFrame(columns=['Paper','Author', 'Year', 'PdfLink', 'Label', 'Reason'])
+    def __init__(self, uploaded_file):
+        self.df = pd.read_csv(uploaded_file)
+        if 'Label' not in self.df.columns:
+            self.df['Label'] = ''
+        if 'Reason' not in self.df.columns:
+            self.df['Reason'] = ''
 
     def update_value(self, paper_name: str, label: str, reason: str) -> bool:
         try:
@@ -101,6 +79,7 @@ class CSVHandler:
                     'Author': '',
                     'Year': '',
                     'PdfLink': '',
+                    'Abstract': '',
                     'Label': [str(label)],
                     'Reason': [str(reason)]
                 })
@@ -108,41 +87,13 @@ class CSVHandler:
             else:
                 self.df.loc[mask, 'Label'] = str(label)
                 self.df.loc[mask, 'Reason'] = str(reason)
-            self.save_csv()
             return True
         except Exception as e:
             st.error(f"Error updating CSV for {paper_name}: {str(e)}")
             return False
 
-    def save_csv(self):
-        self.df.to_csv(self.file_path, index=False, encoding='utf-8')
-
-class JSONHandler:
-    def __init__(self, file_path: str):
-        self.file_path = Path(file_path)
-        self.data = []
-        if self.file_path.exists():
-            try:
-                with open(self.file_path, 'r') as f:
-                    self.data = json.load(f)
-            except Exception:
-                self.data = []
-
-    def update_value(self, paper_name: str, label: str, reason: str) -> bool:
-        self.data = [entry for entry in self.data if entry.get("Paper") != paper_name]
-        self.data.append({
-            "Paper": paper_name,
-            'Author': '',
-            'Year': '',
-            'PdfLink': '',
-            "Label": label,
-            "Reason": reason
-        })
-        return True
-
-    def save_json(self):
-        with open(self.file_path, 'w', encoding='utf-8') as f:
-            json.dump(self.data, f, indent=4)
+    def get_dataframe(self):
+        return self.df
 
 class UI:
     def __init__(self):
@@ -170,23 +121,14 @@ class UI:
     def render_configuration():
         col1, col2 = st.columns(2)
         with col1:
-            pdf_dir = st.text_input("PDF Directory Path",
-                                    value="./downloaded_papers",
-                                    help="Directory containing PDF files")
+            uploaded_file = st.file_uploader("Upload CSV File", type=["csv"], help="Upload a CSV file containing paper metadata")
             model_options = AppConfig.MODELS
-
             model_selection = st.selectbox("Model Selection", model_options)
         with col2:
-            csv_path = st.text_input("CSV Output Path",
-                                     value="./metadata/papers_metadata.csv",
-                                     help="Path to save classification results")
-            json_path = st.text_input("JSON Output Path",
-                                      value="./metadata/papers_metadata.json",
-                                      help="Path to save JSON output")
-        api_key = st.text_input("Gemini API Key",
-                                type="password",
-                                help="Your Google Gemini API key")
-        return pdf_dir, csv_path, json_path, api_key, model_selection
+            api_key = st.text_input("Gemini API Key",
+                                    type="password",
+                                    help="Your Google Gemini API key")
+        return uploaded_file, api_key, model_selection
 
     @staticmethod
     def render_progress(current, total, progress_bar, progress_text, current_info, info):
@@ -202,22 +144,16 @@ class UI:
             st.subheader("Classification Results (CSV)")
             st.dataframe(df, use_container_width=True)
 
-    @staticmethod
-    def render_json_results(data):
-        if data:
-            st.subheader("Classification Results (JSON)")
-            st.json(data, expanded=False)
-
 def main():
     ui = UI()
     ui.render_header()
     delay = 60.0
-    pdf_dir, csv_path, json_path, api_key, model_selection = ui.render_configuration()
+    uploaded_file, api_key, model_selection = ui.render_configuration()
     categories_list = ui.get_multiple_inputs()
     if categories_list:
         AppConfig.CATEGORIES = categories_list
 
-    if st.button("Start Classification", disabled=st.session_state.processing):
+    if uploaded_file is not None and st.button("Start Classification", disabled=st.session_state.processing):
         if not api_key:
             st.error("Please enter your Gemini API Key")
             return
@@ -226,19 +162,23 @@ def main():
             st.session_state.processing = True
 
             # Initialize handlers
-            doc_handler = DocHandler(pdf_dir)
-            csv_handler = CSVHandler(csv_path)
-            json_handler = JSONHandler(json_path)
+            csv_handler = CSVHandler(uploaded_file)
             gemini_api = GeminiAPI(api_key, model_id=random.choice(AppConfig.MODELS))
 
-            pdfs = doc_handler.list_pdfs()
-            total_pdfs = len(pdfs)
-
-            if total_pdfs == 0:
-                st.warning(f"No PDF files found in {pdf_dir}")
+            df = csv_handler.get_dataframe()
+            if 'Abstract' not in df.columns:
+                st.error("The uploaded CSV file does not contain an 'Abstract' column.")
                 return
 
-            st.info(f"Found {total_pdfs} PDFs to process")
+            # Filter rows that have an abstract but no label
+            rows_to_process = df[(df['Abstract'].notna()) & (df['Abstract'] != '')]
+            total_rows = len(rows_to_process)
+
+            if total_rows == 0:
+                st.warning("No rows with abstracts and no labels found in the CSV file.")
+                return
+
+            st.info(f"Found {total_rows} rows to process")
             progress_bar = st.empty()
             progress_text = st.empty()
             current_info = st.empty()
@@ -249,10 +189,12 @@ def main():
             categories_str = ','.join(f'"{cat}"' for cat in AppConfig.CATEGORIES)
             prompt = AppConfig.PROMPT_TEMPLATE.format(categories=categories_str)
 
-            for idx, pdf in enumerate(pdfs, 1):
+            for idx, row in rows_to_process.iterrows():
                 try:
-                    result = gemini_api.process_pdf(str(pdf), prompt)
+                    abstract = row['Abstract']
+                    result = gemini_api.process_abstract(abstract, prompt)
                     result = result.strip()
+
                     # Remove Markdown formatting if present
                     if result.startswith("```") and result.endswith("```"):
                         lines = result.splitlines()
@@ -267,41 +209,33 @@ def main():
                         label = parsed_result.get("category", "").strip()
                         reason = parsed_result.get("reason", "").strip()
                     except json.JSONDecodeError:
-                        st.warning(f"Invalid JSON response format for {pdf.name}: {result}")
+                        st.warning(f"Invalid JSON response format for {row['Paper']}: {result}")
                         continue
 
                     if label not in AppConfig.CATEGORIES:
-                        msg += f"{idx} : ❌ Invalid category '{label}' for {pdf.name}\n"
-                        pdfs.append(pdf)
-                        continue
+                        msg += f"{idx} : ❌ Invalid category '{label}' for {row['Paper']}\n"
+                        label = 'Other'
 
-                    if csv_handler.update_value(pdf.name, label, reason):
-                        msg += f'{idx} : ✓ Classified "{pdf.name}" as "{label}"\n'
+                    if csv_handler.update_value(row['Paper'], label, reason):
+                        msg += f'{idx} : ✓ Classified "{row["Paper"]}" as "{label}"\n'
                     else:
-                        msg += f'{idx} : ⚠ CSV issue for "{pdf.name}"\n'
-                    json_handler.update_value(pdf.name, label, reason)
+                        msg += f'{idx} : ⚠ CSV issue for "{row["Paper"]}"\n'
 
                 except Exception as e:
-                    st.error(f'{idx} : ❌ Error processing "{pdf.name}" : "{str(e)}", Trying next after few seconds')
-                    error_info += f'{idx} : Failed: "{pdf.absolute()}" > "{str(e)}"\n'
+                    st.error(f'{idx} : ❌ Error processing "{row["Paper"]}" : "{str(e)}", Trying next after few seconds')
+                    error_info += f'{idx} : Failed: "{row["Paper"]}" > "{str(e)}"\n'
                     error_area.code(error_info)
                     gemini_api = GeminiAPI(api_key, model_id=random.choice(AppConfig.MODELS))
-                    pdfs.append(pdf)
                     sleep(delay)
                     continue
                 finally:
-                    ui.render_progress(idx, len(pdfs), progress_bar, progress_text, current_info, msg)
+                    ui.render_progress(idx, total_rows, progress_bar, progress_text, current_info, msg)
                     time.sleep(0.1)
-                    if len(pdfs) > floor(total_pdfs + total_pdfs * 0.25):
-                        break;
 
-            csv_handler.save_csv()
-            json_handler.save_json()
             st.toast("Classification completed!", icon="✅")
             st.success("✅ Classification completed!")
             st.balloons()
-            ui.render_results(csv_handler.df)
-            ui.render_json_results(json_handler.data)
+            ui.render_results(csv_handler.get_dataframe())
 
         except Exception as e:
             st.error(f"Error: {str(e)}")
